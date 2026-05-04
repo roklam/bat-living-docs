@@ -1,0 +1,32 @@
+/// <reference types="vite/client" />
+
+import type { AppData } from "./types";
+
+type CatalogAPI = {
+  getCatalog: () => Promise<AppData>;
+  saveTool: (tool: import("./types").Tool) => Promise<AppData>;
+  archiveTool: (toolId: string) => Promise<AppData>;
+  restoreTool: (toolId: string) => Promise<AppData>;
+  addLink: (payload: {
+    toolId: string;
+    type: "jira" | "confluence";
+    url: string;
+    label?: string;
+  }) => Promise<AppData>;
+  archiveLink: (linkId: string) => Promise<AppData>;
+  restoreLink: (linkId: string) => Promise<AppData>;
+  pickBatFiles: () => Promise<string[]>;
+  pickDirectory: () => Promise<string | null>;
+  openExternal: (url: string) => Promise<void>;
+  openPath: (filePath: string) => Promise<string | null>;
+  showItemInFolder: (filePath: string) => Promise<void>;
+  getDataFilePath: () => Promise<string>;
+};
+
+declare global {
+  interface Window {
+    catalog: CatalogAPI;
+  }
+}
+
+export {};

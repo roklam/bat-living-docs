@@ -1,0 +1,47 @@
+export type LinkType = "jira" | "confluence";
+
+export interface Tool {
+  id: string;
+  name: string;
+  description: string;
+  batPaths: string[];
+  createdAt: string;
+  updatedAt: string;
+  archivedAt: string | null;
+}
+
+export interface ResourceLink {
+  id: string;
+  toolId: string;
+  type: LinkType;
+  url: string;
+  label: string | null;
+  createdAt: string;
+  archivedAt: string | null;
+}
+
+export type HistoryAction =
+  | "tool.created"
+  | "tool.updated"
+  | "tool.archived"
+  | "tool.restored"
+  | "link.added"
+  | "link.archived"
+  | "link.restored";
+
+export interface HistoryEntry {
+  id: string;
+  at: string;
+  action: HistoryAction;
+  toolId: string | null;
+  linkId: string | null;
+  summary: string;
+  payload: Record<string, unknown>;
+}
+
+export interface AppData {
+  version: 1;
+  tools: Tool[];
+  links: ResourceLink[];
+  history: HistoryEntry[];
+}
