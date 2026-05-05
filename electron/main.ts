@@ -24,6 +24,16 @@ function getCatalogPath(): string {
   return join(app.getPath("userData"), "bat-living-docs-catalog.json");
 }
 
+/** Electron 41 typings require a concrete `BrowserWindow` parent; avoid `undefined`. */
+function dialogParent(): BrowserWindow | null {
+  return (
+    BrowserWindow.getFocusedWindow() ??
+    mainWindow ??
+    BrowserWindow.getAllWindows()[0] ??
+    null
+  );
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -120,8 +130,9 @@ ipcMain.handle("catalog:restoreLink", (_e, linkId: string) => {
 ipcMain.handle(
   "dialog:pickBatFiles",
   async () => {
-    const owner = BrowserWindow.getFocusedWindow() ?? mainWindow;
-    const result = await dialog.showOpenDialog(owner ?? undefined, {
+    const parent = dialogParent();
+    if (!parent) return [];
+    const result = await dialog.showOpenDialog(parent, {
       title: "Select batch files",
       properties: ["openFile", "multiSelections"],
       filters: [{ name: "Batch", extensions: ["bat", "cmd"] }],
@@ -133,8 +144,9 @@ ipcMain.handle(
 ipcMain.handle(
   "dialog:pickDirectory",
   async () => {
-    const owner = BrowserWindow.getFocusedWindow() ?? mainWindow;
-    const result = await dialog.showOpenDialog(owner ?? undefined, {
+    const parent = dialogParent();
+    if (!parent) return null;
+    const result = await dialog.showOpenDialog(parent, {
       title: "Select folder containing scripts",
       properties: ["openDirectory"],
     });
