@@ -14,6 +14,10 @@ Windows packaging (electron-builder; installers land in release/ — ignored by 
   npm run pack     # unpacked app under release/win-unpacked (quick test)
   npm run dist     # NSIS setup.exe + portable .exe for x64 Windows
 
+Unsigned local builds use signAndEditExecutable=false (avoids symlink issues with
+winCodeSign on some Windows setups). Windows SmartScreen may still warn until
+you publish a signed build with your own code-signing certificate.
+
 Typical commands (run from this folder):
   git checkout release/v0.1.0   # read-only baseline; same as tag v0.1.0
   git checkout next             # continue feature work (installer, scans, APIs, …)
