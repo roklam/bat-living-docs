@@ -1,6 +1,7 @@
 /**
- * Clears `release/` before electron-builder repacks. On Windows, a prior run of
- * the installed/packaged app often locks `app.asar`, which causes EPERM on rebuild.
+ * Clears `release/` before electron-builder repacks. On Windows, a prior run or
+ * Explorer often leaves `app.asar` locked (EPERM). We retry delete, then
+ * PowerShell, then quarantine by renaming the folder so the next build can proceed.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -23,41 +24,95 @@ function killPackagedApp() {
   });
 }
 
+/** Stop any process whose image path lives under release/ (e.g. stale unpacked app). */
+function stopProcessesUsingReleaseTree() {
+  if (process.platform !== "win32") return;
+  const prefix = releaseDir.replace(/'/g, "''");
+  const script = [
+    "$ErrorActionPreference = 'SilentlyContinue'",
+    `$root = '${prefix}'`,
+    "Get-CimInstance Win32_Process | ForEach-Object {",
+    "  $ep = $_.ExecutablePath",
+    "  if ($ep -and $ep.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {",
+    "    Stop-Process -Id $_.ProcessId -Force",
+    "  }",
+    "}",
+  ].join("; ");
+  spawnSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script], {
+    stdio: "ignore",
+    windowsHide: true,
+  });
+}
+
+function powershellRemoveDir(dir) {
+  if (process.platform !== "win32") return false;
+  const lit = dir.replace(/'/g, "''");
+  const r = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      `Remove-Item -LiteralPath '${lit}' -Recurse -Force -ErrorAction Stop`,
+    ],
+    { encoding: "utf-8", windowsHide: true },
+  );
+  return r.status === 0 && !fs.existsSync(dir);
+}
+
+function quarantineReleaseDir() {
+  if (!fs.existsSync(releaseDir)) return true;
+  const quarantine = path.join(
+    root,
+    `release.locked-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  );
+  try {
+    fs.renameSync(releaseDir, quarantine);
+    console.warn(
+      `\nCould not delete release/ (files may still be locked). Renamed it to:\n` +
+        `  ${quarantine}\n` +
+        `You can delete that folder later when nothing is using it.\n` +
+        `Continuing with a fresh release/ for this build.\n`,
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function removeReleaseDir() {
   if (!fs.existsSync(releaseDir)) return;
 
-  for (let attempt = 0; attempt < 10; attempt++) {
+  for (let attempt = 0; attempt < 8; attempt++) {
     try {
       fs.rmSync(releaseDir, {
         recursive: true,
         force: true,
         maxRetries: 10,
-        retryDelay: 200,
+        retryDelay: 250,
       });
       return;
-    } catch (err) {
-      const code = err && typeof err === "object" && "code" in err ? err.code : "";
-      if (attempt === 9) {
-        console.error(
-          "\nCould not delete release/. Usually another process still has app.asar open.\n" +
-            "- Quit any running copy of " +
-            productName +
-            " (including from release\\win-unpacked).\n" +
-            "- Close File Explorer if it is browsing the release\\ folder.\n" +
-            "- Then run npm run dist again.\n",
-        );
-        console.error(err);
-        process.exit(1);
-      }
-      if (code === "EBUSY" || code === "EPERM") {
-        await sleep(500);
-        continue;
-      }
-      await sleep(300);
+    } catch {
+      await sleep(400);
     }
   }
+
+  if (powershellRemoveDir(releaseDir)) return;
+
+  if (quarantineReleaseDir()) return;
+
+  console.error(
+    "\nCould not remove or rename release/. Close anything that might lock it:\n" +
+      `- Quit ${productName} (and any copy run from release\\win-unpacked).\n` +
+      "- Close File Explorer windows showing the release\\ folder.\n" +
+      "- Temporarily pause real-time AV scan on this project folder if needed.\n" +
+      "- Then run: npm run clean:release\n",
+  );
+  process.exit(1);
 }
 
+stopProcessesUsingReleaseTree();
 killPackagedApp();
-await sleep(600);
+await sleep(800);
 await removeReleaseDir();

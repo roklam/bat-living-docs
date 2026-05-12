@@ -11,7 +11,7 @@ Ongoing work (next iteration)
 
 Windows packaging (electron-builder; installers land in release/ — ignored by git):
   npm run build         # compile renderer + main process only
-  npm run clean:release # kill packaged app + delete release/ (also runs automatically before pack/dist)
+  npm run clean:release # kill handlers under release/, then remove or quarantine the folder (also auto before pack/dist)
   npm run pack          # unpacked app under release/win-unpacked (quick test)
   npm run dist          # NSIS setup.exe + portable .exe for x64 Windows
 
