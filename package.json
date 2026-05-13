@@ -13,6 +13,7 @@
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron:compile && cross-env ELECTRON_START_URL=http://localhost:5173 electron .\"",
     "start": "npm run electron:dev",
     "clean:release": "node scripts/clean-release.mjs",
+    "diagnose:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnose-release-locks.ps1",
     "pack": "node scripts/clean-release.mjs && tsc && vite build && tsc -p tsconfig.electron.json && electron-builder --dir --win",
     "dist": "node scripts/clean-release.mjs && tsc && vite build && tsc -p tsconfig.electron.json && electron-builder --win"
   },

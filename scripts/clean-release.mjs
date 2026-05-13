@@ -107,7 +107,8 @@ async function removeReleaseDir() {
       `- Quit ${productName} (and any copy run from release\\win-unpacked).\n` +
       "- Close File Explorer windows showing the release\\ folder.\n" +
       "- Temporarily pause real-time AV scan on this project folder if needed.\n" +
-      "- Then run: npm run clean:release\n",
+      "- Then run: npm run clean:release\n" +
+      "- To see likely lockers: npm run diagnose:release\n",
   );
   process.exit(1);
 }
