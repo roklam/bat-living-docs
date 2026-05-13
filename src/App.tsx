@@ -41,6 +41,7 @@ export default function App() {
         url: string;
         kind: "jira" | "confluence";
         label: string;
+        editLinkId?: string;
       }
     | null
   >(null);
@@ -333,6 +334,16 @@ export default function App() {
                   label: "",
                 })
               }
+              onEditLink={(link) =>
+                setModal({
+                  type: "link",
+                  toolId: link.toolId,
+                  kind: link.type,
+                  url: link.url,
+                  label: link.label ?? "",
+                  editLinkId: link.id,
+                })
+              }
               openExternal={(u) => void window.catalog.openExternal(u)}
               openPath={(p) => void window.catalog.openPath(p)}
               revealFolder={(p) => void window.catalog.showItemInFolder(p)}
@@ -500,13 +511,33 @@ export default function App() {
       {modal?.type === "link" && (
         <Modal
           onClose={() => setModal(null)}
-          title={modal.kind === "confluence" ? "Attach Confluence runbook URL" : "Attach JIRA link"}
+          title={
+            modal.kind === "confluence"
+              ? modal.editLinkId
+                ? "Edit Confluence runbook URL"
+                : "Attach Confluence runbook URL"
+              : modal.editLinkId
+                ? "Edit JIRA link"
+                : "Attach JIRA link"
+          }
         >
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", marginTop: 0 }}>
-            Confluence links display as{" "}
-            <strong style={{ color: "var(--text)" }}>
-              Runbook for {data.tools.find((t) => t.id === modal.toolId)?.name ?? "program"}
-            </strong>
+            {modal.kind === "confluence" ? (
+              <>
+                Confluence links display as{" "}
+                <strong style={{ color: "var(--text)" }}>
+                  Runbook for {data.tools.find((t) => t.id === modal.toolId)?.name ?? "program"}
+                </strong>
+                {modal.editLinkId && (
+                  <>
+                    {" "}
+                    Editing clears the &quot;removed&quot; state and saves the new URL to the timeline.
+                  </>
+                )}
+              </>
+            ) : (
+              "Update the issue URL and optional label."
+            )}
           </p>
           <label style={labelStyles}>
             URL
@@ -544,18 +575,26 @@ export default function App() {
               disabled={!modal.url.trim()}
               onClick={() => {
                 void (async () => {
-                  await window.catalog.addLink({
-                    toolId: modal.toolId,
-                    type: modal.kind,
-                    url: modal.url,
-                    ...(modal.kind === "jira" ? { label: modal.label || undefined } : {}),
-                  });
+                  if (modal.editLinkId) {
+                    await window.catalog.updateLink({
+                      linkId: modal.editLinkId,
+                      url: modal.url,
+                      ...(modal.kind === "jira" ? { label: modal.label || null } : {}),
+                    });
+                  } else {
+                    await window.catalog.addLink({
+                      toolId: modal.toolId,
+                      type: modal.kind,
+                      url: modal.url,
+                      ...(modal.kind === "jira" ? { label: modal.label || undefined } : {}),
+                    });
+                  }
                   setModal(null);
                   await refresh();
                 })();
               }}
             >
-              Save link
+              {modal.editLinkId ? "Save changes" : "Save link"}
             </button>
           </div>
         </Modal>

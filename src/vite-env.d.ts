@@ -15,6 +15,11 @@ type CatalogAPI = {
   }) => Promise<AppData>;
   archiveLink: (linkId: string) => Promise<AppData>;
   restoreLink: (linkId: string) => Promise<AppData>;
+  updateLink: (payload: {
+    linkId: string;
+    url: string;
+    label?: string | null;
+  }) => Promise<AppData>;
   pickBatFiles: () => Promise<string[]>;
   pickDirectory: () => Promise<string | null>;
   openExternal: (url: string) => Promise<void>;

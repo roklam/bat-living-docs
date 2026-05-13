@@ -7,26 +7,42 @@ export function LinkGroup({
   archivedSubset,
   kind,
   toolName,
-  archivedTool,
   openExternal,
   onArchiveLink,
   onRestoreLink,
+  onEditLink,
 }: {
   title: string;
   subset: ResourceLink[];
   archivedSubset: ResourceLink[];
   kind: "jira" | "confluence";
   toolName: string;
-  archivedTool: boolean;
   openExternal: (u: string) => void;
   onArchiveLink: (id: string) => () => Promise<void>;
   onRestoreLink: (id: string) => () => Promise<void>;
+  onEditLink: (link: ResourceLink) => void;
 }) {
+  const onlyHistory = subset.length === 0 && archivedSubset.length > 0;
+
   return (
     <div>
       <div className="mono-sm" style={{ marginBottom: 8, textTransform: "uppercase" }}>
         {title}
       </div>
+      {onlyHistory && (
+        <div
+          style={{
+            marginBottom: 10,
+            fontSize: "0.88rem",
+            color: "var(--text-muted)",
+            lineHeight: 1.45,
+          }}
+        >
+          {kind === "confluence"
+            ? "No active runbook. Use + Confluence above to add a new URL, or Edit / Restore a row below to bring a link back."
+            : "No active JIRA link. Use + JIRA above or Edit / Restore below."}
+        </div>
+      )}
       {subset.length === 0 && archivedSubset.length === 0 ? (
         <div style={{ color: "var(--text-muted)", fontSize: "0.88rem" }}>
           {kind === "confluence"
@@ -41,7 +57,8 @@ export function LinkGroup({
               link={l}
               toolName={toolName}
               openExternal={openExternal}
-              onArchive={!archivedTool ? onArchiveLink(l.id) : undefined}
+              onEdit={() => onEditLink(l)}
+              onArchive={onArchiveLink(l.id)}
             />
           ))}
           {archivedSubset.length > 0 && (
@@ -56,7 +73,8 @@ export function LinkGroup({
                   toolName={toolName}
                   muted
                   openExternal={openExternal}
-                  onRestore={!archivedTool ? onRestoreLink(l.id) : undefined}
+                  onEdit={() => onEditLink(l)}
+                  onRestore={onRestoreLink(l.id)}
                 />
               ))}
             </>
@@ -71,6 +89,7 @@ function LinkRow({
   link,
   toolName,
   openExternal,
+  onEdit,
   onArchive,
   onRestore,
   muted,
@@ -78,6 +97,7 @@ function LinkRow({
   link: ResourceLink;
   toolName: string;
   openExternal: (u: string) => void;
+  onEdit?: () => void;
   onArchive?: () => Promise<void>;
   onRestore?: () => Promise<void>;
   muted?: boolean;
@@ -124,7 +144,17 @@ function LinkRow({
           </div>
         )}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+        {onEdit && (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ fontSize: "0.75rem" }}
+            onClick={onEdit}
+          >
+            Edit URL
+          </button>
+        )}
         {onArchive && (
           <button
             type="button"

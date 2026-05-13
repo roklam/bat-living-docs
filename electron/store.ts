@@ -192,3 +192,34 @@ export function restoreLink(data: AppData, linkId: string): boolean {
   });
   return true;
 }
+
+export function updateLink(
+  data: AppData,
+  linkId: string,
+  patch: { url: string; label?: string | null },
+): boolean {
+  const link = data.links.find((l) => l.id === linkId);
+  if (!link) return false;
+  const tool = data.tools.find((t) => t.id === link.toolId);
+  const wasArchived = !!link.archivedAt;
+  const prevUrl = link.url;
+  link.url = patch.url.trim();
+  if (link.type === "jira" && patch.label !== undefined) {
+    link.label =
+      typeof patch.label === "string"
+        ? patch.label.trim() || null
+        : patch.label;
+  }
+  if (wasArchived) {
+    link.archivedAt = null;
+  }
+  const verb = wasArchived ? "Updated and restored" : "Updated";
+  pushHistory(data, {
+    action: "link.updated",
+    toolId: link.toolId,
+    linkId,
+    summary: `${verb} ${link.type} link for "${tool?.name ?? "tool"}"`,
+    payload: { url: link.url, previousUrl: prevUrl },
+  });
+  return true;
+}

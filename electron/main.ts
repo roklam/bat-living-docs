@@ -9,6 +9,7 @@ import {
   restoreLink,
   restoreTool,
   saveData,
+  updateLink,
   upsertTool,
 } from "./store";
 
@@ -126,6 +127,21 @@ ipcMain.handle("catalog:restoreLink", (_e, linkId: string) => {
   persist();
   return structuredClone(cached);
 });
+
+ipcMain.handle(
+  "catalog:updateLink",
+  (
+    _e,
+    payload: { linkId: string; url: string; label?: string | null },
+  ) => {
+    updateLink(cached, payload.linkId, {
+      url: payload.url,
+      label: payload.label,
+    });
+    persist();
+    return structuredClone(cached);
+  },
+);
 
 ipcMain.handle(
   "dialog:pickBatFiles",

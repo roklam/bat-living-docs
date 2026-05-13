@@ -15,6 +15,7 @@ export function CatalogDetailView({
   revealFolder,
   onArchiveLink,
   onRestoreLink,
+  onEditLink,
 }: {
   tool: Tool;
   links: { active: ResourceLink[]; past: ResourceLink[] };
@@ -23,6 +24,7 @@ export function CatalogDetailView({
   onRestore: () => void;
   onPickBats: () => void;
   onAddLink: (k: "jira" | "confluence") => void;
+  onEditLink: (link: ResourceLink) => void;
   openExternal: (u: string) => void;
   openPath: (p: string) => void;
   revealFolder: (p: string) => void;
@@ -162,25 +164,26 @@ export function CatalogDetailView({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <h3 style={{ margin: 0, fontSize: "0.95rem" }}>Documentation and tracking</h3>
-          {!archived && (
-            <>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                style={{ fontSize: "0.8rem" }}
-                onClick={() => onAddLink("confluence")}
-              >
-                + Confluence
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                style={{ fontSize: "0.8rem" }}
-                onClick={() => onAddLink("jira")}
-              >
-                + JIRA
-              </button>
-            </>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ fontSize: "0.8rem" }}
+            onClick={() => onAddLink("confluence")}
+          >
+            + Confluence
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ fontSize: "0.8rem" }}
+            onClick={() => onAddLink("jira")}
+          >
+            + JIRA
+          </button>
+          {archived && (
+            <span className="mono-sm" style={{ color: "var(--amber)" }}>
+              Program archived — links still editable; restore program to change runners.
+            </span>
           )}
         </div>
 
@@ -191,10 +194,10 @@ export function CatalogDetailView({
             subset={links.active.filter((l) => l.type === "confluence")}
             archivedSubset={links.past.filter((l) => l.type === "confluence")}
             kind="confluence"
-            archivedTool={archived}
             openExternal={openExternal}
             onArchiveLink={onArchiveLink}
             onRestoreLink={onRestoreLink}
+            onEditLink={onEditLink}
           />
           <div style={{ height: "0.85rem" }} />
           <LinkGroup
@@ -203,10 +206,10 @@ export function CatalogDetailView({
             subset={links.active.filter((l) => l.type === "jira")}
             archivedSubset={links.past.filter((l) => l.type === "jira")}
             kind="jira"
-            archivedTool={archived}
             openExternal={openExternal}
             onArchiveLink={onArchiveLink}
             onRestoreLink={onRestoreLink}
+            onEditLink={onEditLink}
           />
         </div>
       </section>
