@@ -3,11 +3,13 @@ import type { CSSProperties } from "react";
 import { v4 as uuid } from "uuid";
 import type { AppData, ResourceLink, Tool } from "./types";
 import { CatalogDetailView } from "./components/CatalogDetailView";
+import { HelpPanel } from "./components/HelpPanel";
 import { Modal } from "./components/Modal";
 import { TimelinePanel } from "./components/TimelinePanel";
 import { ToolRow } from "./components/ToolRow";
+import { entriesForProgram } from "./util/entriesForProgram";
 
-type Tab = "catalog" | "history";
+type Tab = "catalog" | "history" | "help";
 
 const labelStyles: CSSProperties = {
   display: "flex",
@@ -41,6 +43,7 @@ export default function App() {
         url: string;
         kind: "jira" | "confluence";
         label: string;
+        editLinkId?: string;
       }
     | null
   >(null);
@@ -97,6 +100,11 @@ export default function App() {
     },
     [data],
   );
+
+  const programHistoryEntries = useMemo(() => {
+    if (!data || !selectedId) return [];
+    return entriesForProgram(data, selectedId);
+  }, [data, selectedId]);
 
   async function persistTool(tool: Tool) {
     const next = (await window.catalog.saveTool(tool)) as AppData;
@@ -197,9 +205,25 @@ export default function App() {
           >
             Timeline
           </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={
+              tab === "help"
+                ? {
+                    borderColor: "var(--accent)",
+                    color: "var(--accent)",
+                    background: "var(--accent-dim)",
+                  }
+                : {}
+            }
+            onClick={() => setTab("help")}
+          >
+            Help
+          </button>
         </nav>
 
-        {tab === "catalog" ? (
+        {tab === "catalog" && (
           <>
             <button
               type="button"
@@ -266,25 +290,47 @@ export default function App() {
                 </>
               )}
             </div>
-
-            <footer
-              className="mono-sm"
-              style={{
-                paddingTop: "0.75rem",
-                borderTop: "1px solid var(--border)",
-                wordBreak: "break-all",
-              }}
-            >
-              Data file
-              <div style={{ color: "var(--mint)", marginTop: 4 }}>{dataPathHint ?? ""}</div>
-              <div style={{ marginTop: "0.65rem", color: "var(--text-muted)" }}>
-                Removing a link archives it with a timeline entry. Archived programs can be restored.
-              </div>
-            </footer>
           </>
-        ) : (
-          <TimelinePanel entries={data.history} tools={data.tools} />
         )}
+
+        {tab === "history" && (
+          <div className="scroll-y" style={{ flex: 1, paddingRight: 4 }}>
+            <p
+              className="mono-sm"
+              style={{ color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}
+            >
+              The global change log opens in the main panel. Entries older than{" "}
+              <strong style={{ color: "var(--text)" }}>365 days</strong> are removed automatically when the app
+              loads or saves.
+            </p>
+          </div>
+        )}
+
+        {tab === "help" && (
+          <div className="scroll-y" style={{ flex: 1, paddingRight: 4 }}>
+            <p
+              className="mono-sm"
+              style={{ color: "var(--text-muted)", lineHeight: 1.45, margin: 0 }}
+            >
+              About, prerequisites, MFWE-1393, and the GitHub repo are in the main panel.
+            </p>
+          </div>
+        )}
+
+        <footer
+          className="mono-sm"
+          style={{
+            paddingTop: "0.75rem",
+            borderTop: "1px solid var(--border)",
+            wordBreak: "break-all",
+          }}
+        >
+          Data file
+          <div style={{ color: "var(--mint)", marginTop: 4 }}>{dataPathHint ?? ""}</div>
+          <div style={{ marginTop: "0.65rem", color: "var(--text-muted)" }}>
+            Removing a link archives it with a timeline entry. Archived programs can be restored.
+          </div>
+        </footer>
       </aside>
 
       <main style={{ padding: "1rem 1rem 1rem 0", minWidth: 0 }}>
@@ -301,6 +347,8 @@ export default function App() {
             <CatalogDetailView
               tool={selected}
               links={linksForTool(selectedId)}
+              historyEntries={programHistoryEntries}
+              tools={data.tools}
               onEdit={() =>
                 setModal({
                   type: "tool",
@@ -333,6 +381,16 @@ export default function App() {
                   label: "",
                 })
               }
+              onEditLink={(link) =>
+                setModal({
+                  type: "link",
+                  toolId: link.toolId,
+                  kind: link.type,
+                  url: link.url,
+                  label: link.label ?? "",
+                  editLinkId: link.id,
+                })
+              }
               openExternal={(u) => void window.catalog.openExternal(u)}
               openPath={(p) => void window.catalog.openPath(p)}
               revealFolder={(p) => void window.catalog.showItemInFolder(p)}
@@ -356,6 +414,22 @@ export default function App() {
               }}
             >
               Select or add a program to begin.
+            </div>
+          )}
+
+          {tab === "history" && (
+            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <TimelinePanel
+                entries={data.history}
+                tools={data.tools}
+                showRetentionDetails
+              />
+            </div>
+          )}
+
+          {tab === "help" && (
+            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <HelpPanel />
             </div>
           )}
         </div>
@@ -394,7 +468,7 @@ export default function App() {
 
           {!modal.isNew && (
             <section style={{ marginTop: "1rem" }}>
-              <span className="mono-sm">Linked .bat paths</span>
+              <span className="mono-sm">Linked runners (.bat / .cmd / .exe)</span>
               <div
                 style={{
                   marginTop: 8,
@@ -500,13 +574,33 @@ export default function App() {
       {modal?.type === "link" && (
         <Modal
           onClose={() => setModal(null)}
-          title={modal.kind === "confluence" ? "Attach Confluence runbook URL" : "Attach JIRA link"}
+          title={
+            modal.kind === "confluence"
+              ? modal.editLinkId
+                ? "Edit Confluence runbook URL"
+                : "Attach Confluence runbook URL"
+              : modal.editLinkId
+                ? "Edit JIRA link"
+                : "Attach JIRA link"
+          }
         >
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", marginTop: 0 }}>
-            Confluence links display as{" "}
-            <strong style={{ color: "var(--text)" }}>
-              Runbook for {data.tools.find((t) => t.id === modal.toolId)?.name ?? "program"}
-            </strong>
+            {modal.kind === "confluence" ? (
+              <>
+                Confluence links display as{" "}
+                <strong style={{ color: "var(--text)" }}>
+                  Runbook for {data.tools.find((t) => t.id === modal.toolId)?.name ?? "program"}
+                </strong>
+                {modal.editLinkId && (
+                  <>
+                    {" "}
+                    Editing clears the &quot;removed&quot; state and saves the new URL to the timeline.
+                  </>
+                )}
+              </>
+            ) : (
+              "Update the issue URL and optional label."
+            )}
           </p>
           <label style={labelStyles}>
             URL
@@ -544,18 +638,26 @@ export default function App() {
               disabled={!modal.url.trim()}
               onClick={() => {
                 void (async () => {
-                  await window.catalog.addLink({
-                    toolId: modal.toolId,
-                    type: modal.kind,
-                    url: modal.url,
-                    ...(modal.kind === "jira" ? { label: modal.label || undefined } : {}),
-                  });
+                  if (modal.editLinkId) {
+                    await window.catalog.updateLink({
+                      linkId: modal.editLinkId,
+                      url: modal.url,
+                      ...(modal.kind === "jira" ? { label: modal.label || null } : {}),
+                    });
+                  } else {
+                    await window.catalog.addLink({
+                      toolId: modal.toolId,
+                      type: modal.kind,
+                      url: modal.url,
+                      ...(modal.kind === "jira" ? { label: modal.label || undefined } : {}),
+                    });
+                  }
                   setModal(null);
                   await refresh();
                 })();
               }}
             >
-              Save link
+              {modal.editLinkId ? "Save changes" : "Save link"}
             </button>
           </div>
         </Modal>

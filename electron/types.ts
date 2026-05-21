@@ -27,7 +27,8 @@ export type HistoryAction =
   | "tool.restored"
   | "link.added"
   | "link.archived"
-  | "link.restored";
+  | "link.restored"
+  | "link.updated";
 
 export interface HistoryEntry {
   id: string;

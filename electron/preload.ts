@@ -13,12 +13,23 @@ export type RendererCatalogAPI = {
   }) => Promise<unknown>;
   archiveLink: (linkId: string) => Promise<unknown>;
   restoreLink: (linkId: string) => Promise<unknown>;
+  updateLink: (payload: {
+    linkId: string;
+    url: string;
+    label?: string | null;
+  }) => Promise<unknown>;
   pickBatFiles: () => Promise<string[]>;
   pickDirectory: () => Promise<string | null>;
   openExternal: (url: string) => Promise<void>;
   openPath: (filePath: string) => Promise<string | null>;
   showItemInFolder: (filePath: string) => Promise<void>;
   getDataFilePath: () => Promise<string>;
+  getAbout: () => Promise<{
+    name: string;
+    version: string;
+    description: string;
+    historyRetentionDays: number;
+  }>;
 };
 
 const api: RendererCatalogAPI = {
@@ -29,6 +40,7 @@ const api: RendererCatalogAPI = {
   addLink: (payload) => ipcRenderer.invoke("catalog:addLink", payload),
   archiveLink: (linkId) => ipcRenderer.invoke("catalog:archiveLink", linkId),
   restoreLink: (linkId) => ipcRenderer.invoke("catalog:restoreLink", linkId),
+  updateLink: (payload) => ipcRenderer.invoke("catalog:updateLink", payload),
   pickBatFiles: () => ipcRenderer.invoke("dialog:pickBatFiles"),
   pickDirectory: () => ipcRenderer.invoke("dialog:pickDirectory"),
   openExternal: (url) => ipcRenderer.invoke("shell:openExternal", url),
@@ -36,6 +48,7 @@ const api: RendererCatalogAPI = {
   showItemInFolder: (filePath) =>
     ipcRenderer.invoke("shell:showItemInFolder", filePath),
   getDataFilePath: () => ipcRenderer.invoke("paths:dataFile"),
+  getAbout: () => ipcRenderer.invoke("about:get"),
 };
 
 contextBridge.exposeInMainWorld("catalog", api);

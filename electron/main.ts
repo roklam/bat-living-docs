@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import type { AppData, LinkType, Tool } from "./types";
 import {
@@ -9,14 +10,17 @@ import {
   restoreLink,
   restoreTool,
   saveData,
+  updateLink,
   upsertTool,
 } from "./store";
+import { HISTORY_RETENTION_DAYS, purgeExpiredHistory } from "./historyRetention";
 
 let mainWindow: BrowserWindow | null = null;
 let dataPath: string;
 let cached: AppData;
 
 function persist(): void {
+  purgeExpiredHistory(cached);
   saveData(dataPath, cached);
 }
 
@@ -64,6 +68,9 @@ function createWindow(): void {
 app.whenReady().then(() => {
   dataPath = getCatalogPath();
   cached = loadData(dataPath);
+  if (purgeExpiredHistory(cached) > 0) {
+    saveData(dataPath, cached);
+  }
   createWindow();
 
   app.on("activate", () => {
@@ -75,7 +82,46 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-ipcMain.handle("catalog:get", () => structuredClone(cached));
+ipcMain.handle("catalog:get", () => {
+  if (purgeExpiredHistory(cached) > 0) {
+    saveData(dataPath, cached);
+  }
+  return structuredClone(cached);
+});
+
+ipcMain.handle("about:get", () => {
+  try {
+    const pkgPath = join(app.getAppPath(), "package.json");
+    if (!existsSync(pkgPath)) {
+      return {
+        name: app.getName(),
+        version: app.getVersion(),
+        description: "",
+        historyRetentionDays: HISTORY_RETENTION_DAYS,
+      };
+    }
+    const raw = readFileSync(pkgPath, "utf-8");
+    const j = JSON.parse(raw) as {
+      name?: string;
+      version?: string;
+      description?: string;
+      build?: { productName?: string };
+    };
+    return {
+      name: j.build?.productName ?? j.name ?? app.getName(),
+      version: String(j.version ?? app.getVersion()),
+      description: String(j.description ?? ""),
+      historyRetentionDays: HISTORY_RETENTION_DAYS,
+    };
+  } catch {
+    return {
+      name: "BAT Living Docs",
+      version: app.getVersion(),
+      description: "",
+      historyRetentionDays: HISTORY_RETENTION_DAYS,
+    };
+  }
+});
 
 ipcMain.handle(
   "catalog:saveTool",
@@ -128,14 +174,34 @@ ipcMain.handle("catalog:restoreLink", (_e, linkId: string) => {
 });
 
 ipcMain.handle(
+  "catalog:updateLink",
+  (
+    _e,
+    payload: { linkId: string; url: string; label?: string | null },
+  ) => {
+    updateLink(cached, payload.linkId, {
+      url: payload.url,
+      label: payload.label,
+    });
+    persist();
+    return structuredClone(cached);
+  },
+);
+
+ipcMain.handle(
   "dialog:pickBatFiles",
   async () => {
     const parent = dialogParent();
     if (!parent) return [];
     const result = await dialog.showOpenDialog(parent, {
-      title: "Select batch files",
+      title: "Select runners (.bat, .cmd, .exe)",
       properties: ["openFile", "multiSelections"],
-      filters: [{ name: "Batch", extensions: ["bat", "cmd"] }],
+      filters: [
+        {
+          name: "Windows runners",
+          extensions: ["bat", "cmd", "exe"],
+        },
+      ],
     });
     return result.canceled ? [] : result.filePaths;
   },
