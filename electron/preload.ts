@@ -24,6 +24,12 @@ export type RendererCatalogAPI = {
   openPath: (filePath: string) => Promise<string | null>;
   showItemInFolder: (filePath: string) => Promise<void>;
   getDataFilePath: () => Promise<string>;
+  getAbout: () => Promise<{
+    name: string;
+    version: string;
+    description: string;
+    historyRetentionDays: number;
+  }>;
 };
 
 const api: RendererCatalogAPI = {
@@ -42,6 +48,7 @@ const api: RendererCatalogAPI = {
   showItemInFolder: (filePath) =>
     ipcRenderer.invoke("shell:showItemInFolder", filePath),
   getDataFilePath: () => ipcRenderer.invoke("paths:dataFile"),
+  getAbout: () => ipcRenderer.invoke("about:get"),
 };
 
 contextBridge.exposeInMainWorld("catalog", api);

@@ -1,51 +1,52 @@
 import { HISTORY_RETENTION_DAYS, retentionExpiresAtIso } from "../constants/historyRetention";
-import { fmtDate } from "../util/format";
-import { summarizeAboutRetention, summarizeExpiresFmt } from "../util/aboutRetentionText";
 import type { HistoryEntry, Tool } from "../types";
+import { summarizeAboutRetention, summarizeExpiresFmt } from "../util/aboutRetentionText";
+import { fmtDate } from "../util/format";
 
-export function TimelinePanel({
+function entrySortDesc(a: HistoryEntry, b: HistoryEntry): number {
+  return new Date(b.at).getTime() - new Date(a.at).getTime();
+}
+
+export function ProgramHistoryPanel({
   entries,
   tools,
-  showRetentionDetails = false,
+  programName,
 }: {
   entries: HistoryEntry[];
   tools: Tool[];
-  /** Larger layout + per-row purge dates for the global Timeline view */
-  showRetentionDetails?: boolean;
+  programName: string;
 }) {
+  const sorted = [...entries].sort(entrySortDesc);
   const days = HISTORY_RETENTION_DAYS;
-  const sorted = [...entries].sort(
-    (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
-  );
 
   return (
     <div className="scroll-y" style={{ flex: 1, paddingRight: 6, minHeight: 0 }}>
-      {showRetentionDetails && (
-        <div
-          style={{
-            marginBottom: "1rem",
-            padding: "0.85rem 1rem",
-            border: "1px solid rgba(110, 231, 255, 0.28)",
-            background: "var(--accent-dim)",
-            borderRadius: "var(--radius-sm)",
-          }}
-        >
-          <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 6 }}>
-            Global timeline retention — {days} days
-          </div>
-          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.45 }}>
-            {summarizeAboutRetention(days)} Each line below expires on its purge date unless you revisit the app
-            sooner (purge runs on reload and saves).
-          </div>
+      <div
+        className="glass-panel"
+        style={{
+          marginBottom: "1rem",
+          padding: "0.85rem 1rem",
+          border: "1px solid rgba(110, 231, 255, 0.28)",
+          background: "var(--accent-dim)",
+          borderRadius: "var(--radius-sm)",
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: 6 }}>
+          Retention — {days} days
         </div>
-      )}
+        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.45 }}>
+          {summarizeAboutRetention(days)} Applies to{" "}
+          <strong style={{ color: "var(--text)" }}>{programName}</strong> only in this tab. Older
+          events are removed permanently from disk on the next load or catalog save.
+        </div>
+      </div>
 
-      <p className="mono-sm" style={{ textTransform: "uppercase", marginBottom: "0.75rem" }}>
-        Change log
+      <p className="mono-sm" style={{ textTransform: "uppercase", marginBottom: "0.65rem" }}>
+        Program timeline
       </p>
       {sorted.length === 0 ? (
         <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          No events retained in the last {days} days.
+          No events in the last {days} days for this program.
         </p>
       ) : (
         sorted.map((e) => {
@@ -60,7 +61,7 @@ export function TimelinePanel({
               }}
             >
               <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
-                {fmtDate(e.at)}
+                Event: {fmtDate(e.at)}
                 {e.toolId && (
                   <>
                     {" · "}
@@ -68,7 +69,7 @@ export function TimelinePanel({
                   </>
                 )}
               </div>
-              {showRetentionDetails && exp && (
+              {exp && (
                 <div
                   style={{
                     marginTop: 4,

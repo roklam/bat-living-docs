@@ -26,6 +26,12 @@ type CatalogAPI = {
   openPath: (filePath: string) => Promise<string | null>;
   showItemInFolder: (filePath: string) => Promise<void>;
   getDataFilePath: () => Promise<string>;
+  getAbout: () => Promise<{
+    name: string;
+    version: string;
+    description: string;
+    historyRetentionDays: number;
+  }>;
 };
 
 declare global {
