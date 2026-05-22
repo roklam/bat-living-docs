@@ -14,6 +14,7 @@ import {
   upsertTool,
 } from "./store";
 import { HISTORY_RETENTION_DAYS, purgeExpiredHistory } from "./historyRetention";
+import { registerAssistantHandlers } from "./assistant/registerAssistantHandlers";
 
 let mainWindow: BrowserWindow | null = null;
 let dataPath: string;
@@ -71,6 +72,7 @@ app.whenReady().then(() => {
   if (purgeExpiredHistory(cached) > 0) {
     saveData(dataPath, cached);
   }
+  registerAssistantHandlers();
   createWindow();
 
   app.on("activate", () => {

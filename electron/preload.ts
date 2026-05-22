@@ -51,4 +51,21 @@ const api: RendererCatalogAPI = {
   getAbout: () => ipcRenderer.invoke("about:get"),
 };
 
+/** Embedded assistant bridge (Electron main invokes cloud LLMs — keys never exposed here). */
+export type RendererAssistantAPI = {
+  listProviders: () => Promise<{
+    providers: Array<{ id: string; label: string; configured: boolean }>;
+  }>;
+  chat: (body: {
+    provider: string;
+    messages: Array<{ role: string; content: string }>;
+  }) => Promise<{ ok: true; reply: string } | { ok: false; code: string; message: string }>;
+};
+
+const assistantApi: RendererAssistantAPI = {
+  listProviders: () => ipcRenderer.invoke("assistant:listProviders"),
+  chat: (body) => ipcRenderer.invoke("assistant:chat", body),
+};
+
 contextBridge.exposeInMainWorld("catalog", api);
+contextBridge.exposeInMainWorld("assistant", assistantApi);

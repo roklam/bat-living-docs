@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 import type { AppData } from "./types";
+import type { AssistantProviderId, AssistantTurn } from "./types/assistant";
 
 type CatalogAPI = {
   getCatalog: () => Promise<AppData>;
@@ -34,9 +35,24 @@ type CatalogAPI = {
   }>;
 };
 
+type AssistantProvidersResponse = {
+  providers: Array<{ id: AssistantProviderId; label: string; configured: boolean }>;
+};
+
+type AssistantInvokeResult =
+  | { ok: true; reply: string }
+  | { ok: false; code: string; message: string };
+
+type AssistantAPI = {
+  listProviders: () => Promise<AssistantProvidersResponse>;
+  chat: (body: { provider: AssistantProviderId; messages: AssistantTurn[] }) => Promise<AssistantInvokeResult>;
+};
+
 declare global {
   interface Window {
     catalog: CatalogAPI;
+    /** Present after Electron preload; absent in bare Vite preview. */
+    assistant?: AssistantAPI;
   }
 }
 

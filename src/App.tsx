@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { v4 as uuid } from "uuid";
 import type { AppData, ResourceLink, Tool } from "./types";
+import { AssistantPanel } from "./components/AssistantPanel";
 import { CatalogDetailView } from "./components/CatalogDetailView";
 import { HelpPanel } from "./components/HelpPanel";
 import { Modal } from "./components/Modal";
@@ -9,7 +10,7 @@ import { TimelinePanel } from "./components/TimelinePanel";
 import { ToolRow } from "./components/ToolRow";
 import { entriesForProgram } from "./util/entriesForProgram";
 
-type Tab = "catalog" | "history" | "help";
+type Tab = "catalog" | "history" | "help" | "assistant";
 
 const labelStyles: CSSProperties = {
   display: "flex",
@@ -221,6 +222,22 @@ export default function App() {
           >
             Help
           </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={
+              tab === "assistant"
+                ? {
+                    borderColor: "var(--accent)",
+                    color: "var(--accent)",
+                    background: "var(--accent-dim)",
+                  }
+                : {}
+            }
+            onClick={() => setTab("assistant")}
+          >
+            Assistant
+          </button>
         </nav>
 
         {tab === "catalog" && (
@@ -313,6 +330,18 @@ export default function App() {
               style={{ color: "var(--text-muted)", lineHeight: 1.45, margin: 0 }}
             >
               About, prerequisites, MFWE-1393, and the GitHub repo are in the main panel.
+            </p>
+          </div>
+        )}
+
+        {tab === "assistant" && (
+          <div className="scroll-y" style={{ flex: 1, paddingRight: 4 }}>
+            <p
+              className="mono-sm"
+              style={{ color: "var(--text-muted)", lineHeight: 1.45, margin: 0 }}
+            >
+              Choose Claude, Gemini, or Copilot positioning; chat uses Anthropic/Google when API keys exist on the host
+              process.
             </p>
           </div>
         )}
@@ -430,6 +459,12 @@ export default function App() {
           {tab === "help" && (
             <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
               <HelpPanel />
+            </div>
+          )}
+
+          {tab === "assistant" && (
+            <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <AssistantPanel />
             </div>
           )}
         </div>
